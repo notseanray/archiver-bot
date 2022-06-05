@@ -1,0 +1,34 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css">
+		<link rel="stylesheet" href="../../main.css">
+		<title>{{server_name}} - {{channel_name}}</title>
+		<link rel="icon" type="image/x-icon" href="{{server_icon}}">
+	</head>
+	<main>
+		<a href="./index.html">back</a>
+		<br>
+		<div class="controlButtons">
+			<button onclick="bottomFunction()" title="">⬇ down to bottom</button>
+		</div>
+		<script>
+		function bottomFunction() {
+			window.scrollTo(0, document.body.scrollHeight);
+		}
+		function topFunction() {
+			document.body.scrollTop = 0;
+			document.documentElement.scrollTop = 0;
+		}
+		</script>
+		<div class="serverHeader">
+			<img src="{{server_icon}}" alt="" />
+			Server: {{server_name}} ({{server_id}}) Channel: {{channel_name}} ({{channel_id}})
+			<br>
+			Topic: {{channel_description}}
+		</div>
+		<a name="top"></a>
+		{{{channels}}}
+		{{{data}}}
+		<a href="#top"><button>↑ back to top</button></a>
+	</main>
+</html>

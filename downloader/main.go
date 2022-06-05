@@ -43,7 +43,20 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			fmt.Println("failed to fetch guild", m.GuildID)
 		}
 		s.State.GuildAdd(guild)
-		getChannels(s, m.GuildID)
+		getChannels(s, m.GuildID, "0")
+	}
+	if m.Content == "channel" {
+		if lock {
+			s.ChannelMessageSend(m.ChannelID, "locked, please wait for this to unlock")
+			return
+		}
+		lock = true
+		guild, err := s.Guild(m.GuildID)
+		if err != nil {
+			fmt.Println("failed to fetch guild", m.GuildID, m.ChannelID)
+		}
+		s.State.GuildAdd(guild)
+		getChannels(s, m.GuildID, m.ChannelID)
 	}
 	if m.Content == "ping" {
 		fmt.Println("pong")
@@ -87,6 +100,22 @@ type SavableMessage struct {
 	Pinned            bool
 	Content           string
 	ReferencedMessage []SavableReferencedMessage
+}
+
+type ServerData struct {
+	Id string
+	Name string 
+	Icon string
+	OwnerId string 
+	MemberCount int 
+	Description string
+}
+
+type ChannelData struct {
+	Id string 
+	Name string 
+	Topic string 
+	Position int 
 }
 
 func filterMessage(m *discordgo.Message) SavableMessage {
@@ -150,14 +179,39 @@ func filterMessage(m *discordgo.Message) SavableMessage {
 	return msg
 }
 
-func getChannels(s *discordgo.Session, id string) {
+func getChannels(s *discordgo.Session, id string, cid string) {
 	channels, _ := s.GuildChannels(id)
 	channelCount := len(channels)
 	fmt.Println("running on", id)
 	os.Mkdir(id, 0755)
+	serverData := id+"/server.json"
+	merr := os.NewFile(0755, serverData)
+	if merr != nil {
+		fmt.Println("failed to create server data file")
+	}
+	guild, _ := s.Guild(id)
+	sData := ServerData {
+		Id: guild.ID,
+		Name:   guild.Name,
+		Icon: guild.IconURL(),
+		OwnerId: guild.OwnerID,
+		MemberCount: guild.MemberCount,
+		Description: guild.Description,
+	}
+	savableServerData, umerr := json.Marshal(sData)
+	if umerr != nil {
+		fmt.Println("failed to marshal server data", umerr)
+	}
+	werr := ioutil.WriteFile(serverData, []byte(savableServerData), 0644)
+	if werr != nil {
+		fmt.Println("failed to save server data for", id)
+	}
 	s.State.MaxMessageCount = 100
 	for i, c := range channels {
 		if c.Type != discordgo.ChannelTypeGuildText {
+			continue
+		}
+		if cid != "0" && c.ID != cid {
 			continue
 		}
 		os.Mkdir(id+"/"+c.ID, 0755)
@@ -167,6 +221,26 @@ func getChannels(s *discordgo.Session, id string) {
 		_, err := s.State.Channel(c.ID)
 		if err != nil {
 			fmt.Println("error fetching", c.Name)
+		}
+		channelData := id+"/"+c.ID+"/channel.json"
+
+		cerr := os.NewFile(0755, channelData)
+		if cerr != nil {
+			fmt.Println("failed to create server data file")
+		}
+		cData := ChannelData {
+			Id: c.ID,
+			Name: c.Name,
+			Topic: c.Topic, 
+			Position: c.Position,
+		}
+		savableChannelData, cmerr := json.Marshal(cData)
+		if cmerr != nil {
+			fmt.Println("failed to marshal channel data", c.ID)
+		}
+		wcerr := ioutil.WriteFile(channelData, []byte(savableChannelData), 0644)
+		if wcerr != nil {
+			fmt.Println("failed to save server data for", id)
 		}
 		lastId := c.LastMessageID
 		messageCache := []SavableMessage{}
@@ -201,13 +275,13 @@ func getChannels(s *discordgo.Session, id string) {
 				}
 			}
 		}
-		if len(messageCache) < 4000 {
+		if len(messageCache) < chunksize {
 			// fmt.Println(data)
 			chunkContent, e := json.Marshal(messageCache)
 			if e != nil {
 				fmt.Println("invalid json data")
 			}
-			chunkFile := fmt.Sprintf("%s/%s/%d", id, c.ID, chunk)
+			chunkFile := fmt.Sprintf("%s/%s/%d.json", id, c.ID, chunk)
 			_ = os.NewFile(0755, chunkFile)
 			err = ioutil.WriteFile(chunkFile, chunkContent, 0644)
 			if err != nil {
@@ -218,12 +292,12 @@ func getChannels(s *discordgo.Session, id string) {
 			for _, m := range messageCache {
 				count++
 				chunkCache = append(chunkCache, m)
-				if count%4000 == 0 {
+				if count%chunksize == 0 {
 					chunkContent, e := json.Marshal(chunkCache)
 					if e != nil {
 						fmt.Println("invalid json data")
 					}
-					chunkFile := fmt.Sprintf("%s/%s/%d", id, c.ID, chunk)
+					chunkFile := fmt.Sprintf("%s/%s/%d.json", id, c.ID, chunk)
 					_ = os.NewFile(0755, chunkFile)
 					err = ioutil.WriteFile(chunkFile, chunkContent, 0755)
 					if err != nil {

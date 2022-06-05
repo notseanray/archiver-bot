@@ -1,0 +1,65 @@
+* img {
+	max-height: 70vh;
+}
+
+* {
+	overflow-x: hidden;
+}
+
+.button {
+	text-decoration: none;
+	color: white;
+}
+
+.controlButtons {
+	position: fixed;
+}
+
+.controlButtons #btt {
+	position: fixed;
+	margin-left: 200px;
+}
+
+.serverHeader {
+	padding-top: 50px;
+	padding-bottom: 20px;
+	align-items: center;
+	justify-content: left;
+	display: flex;
+}
+
+.serverHeader img {
+	padding-right: 40px;
+	height: 64px;
+}
+
+.message {
+	margin-top: 20px;
+	align-items: center;
+	padding: 5px;
+}
+
+.reply {
+	color: red;
+}
+
+.button {
+	position: fixed;
+}
+
+.author {
+	display: flex;
+	align-items: center;
+	justify-content: left;
+	padding-bottom: 5px;
+}
+
+.content {
+	padding-top: 5px;
+	border: 2px solid #808080;
+}
+
+.message .author img {
+	height: 48px;
+	padding-right: 10px;
+}
